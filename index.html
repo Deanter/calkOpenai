@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Калькулятор расходов OpenAI</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            height: 100%;
+        }
+        .calculator-container {
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .calculator-window {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            max-width: 90%;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .calculator-window.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .calculator-title {
+            font-size: 1.5rem;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            text-align: center;
+            color: #4a5568;
+        }
+        .calculator-section {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .calculator-section label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: #4a5568;
+            font-weight: bold;
+        }
+        .calculator-section input,
+        .calculator-section select {
+            width: 100%;
+            padding: 0.5rem;
+            border: 1px solid #cbd5e0;
+            border-radius: 0.25rem;
+            font-size: 1rem;
+            box-sizing: border-box;
+        }
+        .tokenizer-link {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 0.5rem;
+        }
+        .tokenizer-link a {
+            color: #4299e1;
+            text-decoration: none;
+        }
+        .calculate-button {
+            width: 100%;
+            padding: 0.75rem;
+            background: linear-gradient(45deg, #4299e1, #667eea);
+            color: white;
+            border: none;
+            border-radius: 0.25rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        .calculate-button:hover {
+            background: linear-gradient(45deg, #3182ce, #5a67d8);
+            box-shadow: 0 4px 15px rgba(66, 153, 225, 0.4);
+        }
+        .calculate-button:active {
+            transform: scale(0.98);
+        }
+        .calculate-button::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.3) 0%, rgba(255,255,255,0) 70%);
+            transform: scale(0);
+            transition: transform 0.5s;
+        }
+        .calculate-button:hover::before {
+            transform: scale(1);
+        }
+        .calculate-button.loading {
+            background: linear-gradient(45deg, #3182ce, #5a67d8);
+            cursor: not-allowed;
+        }
+        .button-text {
+            position: relative;
+            z-index: 1;
+        }
+        .loader {
+            display: none;
+            justify-content: center;
+            align-items: center;
+            height: 24px;
+        }
+        .loader-inner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid #ffffff;
+            border-top: 3px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .result-section {
+            margin-top: 1rem;
+            text-align: center;
+            font-weight: bold;
+            color: #2d3748;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: opacity 0.5s, transform 0.5s;
+        }
+        .result-section.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator-container">
+        <div class="calculator-window">
+            <h2 class="calculator-title">Калькулятор расходов OpenAI</h2>
+            
+            <div class="calculator-section">
+                <label for="model-select">Выберите модель</label>
+                <select id="model-select">
+                    <option value="gpt-4o">gpt-4o</option>
+                    <option value="gpt-4o-2024-05-13">gpt-4o-2024-05-13</option>
+                    <option value="gpt-3.5-turbo-0125">gpt-3.5-turbo-0125</option>
+                    <option value="gpt-3.5-turbo-instruct">gpt-3.5-turbo-instruct</option>
+                    <option value="gpt-4-turbo">gpt-4-turbo</option>
+                    <option value="gpt-4-turbo-2024-04-09">gpt-4-turbo-2024-04-09</option>
+                    <option value="gpt-4">gpt-4</option>
+                    <option value="gpt-4-32k">gpt-4-32k</option>
+                    <option value="gpt-4-0125-preview">gpt-4-0125-preview</option>
+                    <option value="gpt-4-1106-preview">gpt-4-1106-preview</option>
+                    <option value="gpt-4-vision-preview">gpt-4-vision-preview</option>
+                    <option value="gpt-3.5-turbo-1106">gpt-3.5-turbo-1106</option>
+                    <option value="gpt-3.5-turbo-0613">gpt-3.5-turbo-0613</option>
+                    <option value="gpt-3.5-turbo-16k-0613">gpt-3.5-turbo-16k-0613</option>
+                    <option value="gpt-3.5-turbo-0301">gpt-3.5-turbo-0301</option>
+                    <option value="davinci-002">davinci-002</option>
+                    <option value="babbage-002">babbage-002</option>
+                </select>
+            </div>
+
+            <div class="calculator-section">
+                <label for="document-tokens">Размер ваших загруженных документов в токенах</label>
+                <input type="number" id="document-tokens" placeholder="Введите количество токенов">
+                <p class="tokenizer-link">
+                    Вы можете подсчитать это <a href="https://platform.openai.com/tokenizer" target="_blank" rel="noopener noreferrer">тут</a>
+                </p>
+            </div>
+
+            <div class="calculator-section">
+                <label for="prompt-tokens">Размер вашего промпта/инструкции в токенах</label>
+                <input type="number" id="prompt-tokens" placeholder="Введите количество токенов">
+            </div>
+
+            <div class="calculator-section">
+                <label for="response-tokens">Примерное количество токенов за 1 ответ от нейросети</label>
+                <input type="number" id="response-tokens" placeholder="Введите количество токенов">
+            </div>
+
+            <button id="calculate-button" class="calculate-button">
+                <span class="button-text">Рассчитать</span>
+                <div class="loader">
+                    <div class="loader-inner"></div>
+                </div>
+            </button>
+
+            <div id="result-section" class="result-section"></div>
+        </div>
+    </div>
+
+    <script>
+        const models = {
+            "gpt-4o": { input: 5.00, output: 15.00 },
+            "gpt-4o-2024-05-13": { input: 5.00, output: 15.00 },
+            "gpt-3.5-turbo-0125": { input: 0.50, output: 1.50 },
+            "gpt-3.5-turbo-instruct": { input: 1.50, output: 2.00 },
+            "gpt-4-turbo": { input: 10.00, output: 30.00 },
+            "gpt-4-turbo-2024-04-09": { input: 10.00, output: 30.00 },
+            "gpt-4": { input: 30.00, output: 60.00 },
+            "gpt-4-32k": { input: 60.00, output: 120.00 },
+            "gpt-4-0125-preview": { input: 10.00, output: 30.00 },
+            "gpt-4-1106-preview": { input: 10.00, output: 30.00 },
+            "gpt-4-vision-preview": { input: 10.00, output: 30.00 },
+            "gpt-3.5-turbo-1106": { input: 1.00, output: 2.00 },
+            "gpt-3.5-turbo-0613": { input: 1.50, output: 2.00 },
+            "gpt-3.5-turbo-16k-0613": { input: 3.00, output: 4.00 },
+            "gpt-3.5-turbo-0301": { input: 1.50, output: 2.00 },
+            "davinci-002": { input: 2.00, output: 2.00 },
+            "babbage-002": { input: 0.40, output: 0.40 }
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const calculatorWindow = document.querySelector('.calculator-window');
+            setTimeout(() => {
+                calculatorWindow.classList.add('visible');
+            }, 500);
+
+            const calculateButton = document.getElementById('calculate-button');
+            const resultSection = document.getElementById('result-section');
+            const buttonText = calculateButton.querySelector('.button-text');
+            const loader = calculateButton.querySelector('.loader');
+
+            calculateButton.addEventListener('click', () => {
+                const model = models[document.getElementById('model-select').value];
+                const documentTokens = parseInt(document.getElementById('document-tokens').value) || 0;
+                const promptTokens = parseInt(document.getElementById('prompt-tokens').value) || 0;
+                const responseTokens = parseInt(document.getElementById('response-tokens').value) || 0;
+
+                calculateButton.classList.add('loading');
+                buttonText.style.display = 'none';
+                loader.style.display = 'flex';
+                resultSection.classList.remove('visible');
+
+                setTimeout(() => {
+                    const inputTokens = documentTokens + promptTokens;
+                    const inputCost = (inputTokens / 1000000) * model.input;
+                    const outputCost = (responseTokens / 1000000) * model.output;
+                    const totalCost = inputCost + outputCost;
+
+                    resultSection.textContent = `Ваш расход за 1 запрос ~ $${totalCost.toFixed(4)}`;
+                    resultSection.classList.add('visible');
+
+                    calculateButton.classList.remove('loading');
+                    buttonText.style.display = 'inline';
+                    loader.style.display = 'none';
+                }, 1500);
+            });
+        });
+    </script>
+</body>
+</html>
